@@ -1,0 +1,80 @@
+# dmonitor-trixie-installer: dmonitorをRaspberry Pi OS (Debian 13 Trixie) に簡単インストールする非公式スクリプト
+
+これは、JARL D-STAR委員会が提供している「dmonitor」 (アマチュア無線でのD-STARのリピータ監視ソフト) を、Raspberry Pi OS (32bit) の、2026年3月時点の最新バージョンである**Debian 13 (Trixie)**環境にインストールするための、非公式パッチ＆インストールスクリプトです。
+
+`dmonitor V02.00`はDebian 12 (Bookworm) 環境向けにビルド・最適化されているため、そのまま最新のDebian 13 (Trixie) 環境にインストールしようとすると「依存パッケージの不整合」や「起動時のOSバージョンチェック」に引っ掛かり正常動作しません。当スクリプトは、正規の`.deb`ファイルを自動でダウンロードし、一時的展開とパッチ当てを行った「改定版パッケージ」を再構築したうえで、安全にシステムへインストールします。
+
+## 💻 必須環境・前提条件
+
+- **dmonitor**: V02.00
+- **OS**: Raspberry Pi OS (32bit) ※Debian 13 "Trixie"系
+- **ネットワーク**: インターネットに接続できること
+- 必要なコマンド群 (`bash`, `wget`, `curl`, `perl`, `dpkg-deb`など。いずれも標準的なものです)
+
+### 動作確認済の組み合わせ
+
+|OS|Debian Version|ハードウェア|無線機|
+|:---|:---|:---|:---|
+|Raspberry Pi OS (32-bit) 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 4 Model B|ICOM ID-52|
+|Raspberry Pi OS (32-bit) 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 3 Model B|ICOM ID-52|
+
+※ICOM ID-52のUSBケーブル接続のみテストしています。Bluetooth接続は未確認です。
+
+## 🚀 使い方
+
+1. 本リポジトリを適当なディレクトリにclone (またはスクリプトをダウンロード) し、ディレクトリに移動します。
+   ```bash
+   git clone https://github.com/mah-jp/dmonitor-trixie-installer.git
+   cd dmonitor-trixie-installer
+   ```
+
+2. **ステップ1: パッチ適用済みdebパッケージの構築**
+   ```bash
+   bash ./1_rebuild_deb.sh
+   ```
+   > 実行が完了すると、カレントディレクトリに`dmonitor_02.00+patched1_armhf.deb`といった名前で再構築されたパッケージが生成されます。
+
+3. **ステップ2: 対象パッケージのインストール**
+   ```bash
+   bash ./2_install_patched-deb.sh
+   ```
+   > 先ほど作成されたばかりの独自の`dmonitor`パッケージを自動判別してインストールします。併せて`WiringPi`の最新版も導入されます。(途中で`apt`コマンドによるパスワードを求められる場合があります。)
+
+4. セットアップが終わったら、設定を反映するためにOSを再起動してください。
+   ```bash
+   sudo reboot
+   ```
+
+## ⚙️ 特徴と技術的なアプローチ
+
+本スクリプトでは、Trixie上で正常動作させるために以下の技術・修正を用いています。
+
+1. **OSバージョンの詐称 (マウント名前空間の利用)**
+   `dmonitor`が備えているOSバージョンチェック (「Bookworm以外では起動しない仕様」や「未サポートOSの警告」) を回避します。本体バイナリに直接手を入れることはせず、`systemd`サービス群の`BindReadOnlyPaths`機能や、CGI環境での`unshare -m`コマンドを使った「一時的なマウント空間の分離」を利用。対象のプロセスから見た`/etc/os-release`などだけをBookworm版のダミー情報にすり替えています。
+
+2. **依存ライブラリのパッチ (t64対応)**
+   Debian 13 (Trixie) で導入されたTime_t 64-bit移行に伴うライブラリ名変更 (`libssl3` → `libssl3t64`) に対応するため、一時展開したパッケージの`DEBIAN/control`の依存記述 (`Depends`) を動的に置換します。
+   同時に、独自のパッチ版であることが将来の`apt`管理において識別できるよう`Version:`フィールドに`+patched1`などの識別子を自動追記します。
+
+3. **CGIスクリプトの安定化 (Perl置換)**
+   一部のCGIスクリプト内に存在する、IPアドレス取得のための`hostname -I`というシェル呼び出し処理を、CGIとしての正規の情報である環境変数`$SERVER_ADDR`を参照するようにPerlスクリプトを使って一括パッチ (`s/…/…/g`) を当てています。
+
+4. **最新のWiringPiの自動解決インストール**
+   GPIO制御などに必要な`WiringPi`が標準のリポジトリから提供されていない状況を考慮し、インストール時にGitHub APIを叩いてWiringPiの最新版 (`armhf.deb`) のURLを動的に特定し、自動で取得・インストールします。
+
+## ⚠️ 注意事項 (免責事項)
+
+- 本スクリプト群は、**個人作成の非公式スクリプト**です。JARL D-STAR委員会や`dmonitor`の本来の開発者さまへ、当パッチスクリプトに関する問い合わせ (「Trixieで動かない」等) は**絶対に行わないでください。**
+- パッケージ内部の`DEBIAN/control`の上書きや、システムレベルでのマウント名前空間の詐称などを使用しています。スクリプトがシステムに及ぼす影響を理解した上で、自己責任でご使用ください。
+- 将来的に公式からTrixie用の`dmonitor`がリリースされたり、プログラム構成が大幅に変更された場合は、パッチの適用に失敗する可能性が大いにあります。
+
+## 📄 ライセンス
+
+本プロジェクトのリポジトリに含まれる**インストーラースクリプト群**は、**MIT License**の条件の下で公開されています。詳細については [LICENSE](LICENSE) ファイルをご覧ください。
+
+> [!NOTE]
+> `dmonitor`プログラム本体および関連ファイル等の著作物の権利は**JARL D-STAR委員会**に帰属します。当スクリプトはインストール補助のみを目的とした非公式のものであり、`dmonitor`本体の著作権やライセンス形態に影響を与えるものではありません。
+
+## 👤 作者
+
+[大久保 正彦 (Masahiko OHKUBO)](https://remoteroom.jp/)
