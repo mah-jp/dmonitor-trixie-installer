@@ -16,10 +16,16 @@
 |:---|:---|:---|:---|
 |Raspberry Pi OS (32-bit) 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 4 Model B|ICOM ID-52|
 |Raspberry Pi OS (32-bit) 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 3 Model B|ICOM ID-52|
+|Raspberry Pi OS (32-bit) Lite 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 3 Model B|ICOM ID-52|
 
 ※ICOM ID-52のUSBケーブル接続のみテストしています。Bluetooth接続は未確認です。
 
 ## 🚀 使い方
+
+0. OSがLite版の場合、最初にgitをインストールしておきます。
+   ```bash
+   sudo apt install git
+   ```
 
 1. 本リポジトリを適当なディレクトリにclone (またはスクリプトをダウンロード) し、ディレクトリに移動します。
    ```bash
@@ -38,6 +44,11 @@
    bash ./2_install_patched-deb.sh
    ```
    > 先ほど作成されたばかりの独自の`dmonitor`パッケージを自動判別してインストールします。併せて`WiringPi`の最新版も導入されます。(途中で`apt`コマンドによるパスワードを求められる場合があります。)
+   >
+   > 💡 **オプション:** すでに同バージョンのパッチ版がインストール済みの環境で、強制的に上書きインストール (再インストール) を行いたい場合は `--reinstall` を付与して実行してください。
+   > ```bash
+   > bash ./2_install_patched-deb.sh --reinstall
+   > ```
 
 4. セットアップが終わったら、設定を反映するためにOSを再起動してください。
    ```bash
@@ -58,8 +69,13 @@
 3. **最新のWiringPiの自動解決インストール**
    GPIO制御などに必要な`WiringPi`が標準のリポジトリから提供されていない状況を考慮し、インストール時にGitHub APIを叩いてWiringPiの最新版 (`armhf.deb`) のURLを動的に特定し、自動で取得・インストールします。
 
+また、一般的な改善として、
+
 4. **CGIスクリプトの安定化 (Perl置換)**
    一部のCGIスクリプト内に存在する、IPアドレス取得のための`hostname -I`というシェル呼び出し処理を、CGIとしての正規の情報である環境変数`$SERVER_ADDR`を参照するようにPerlスクリプトを使って一括パッチ (`s/…/…/g`) を当てています。
+
+5. **udevルールの追記 (最新無線機への対応)**
+   パッケージ再構築の直前に、展開済みの`99-dstar.rules`に最新のUSBデバイスマッピング設定を追記しています。これにより、オリジナル版の提供時にはサポートされていなかった新しい無線機 (ICOM ID-50とID-52 PLUS) をUSB接続した際にも自動でシリアルポートとして認識されるように対応しています。
 
 ## ⚠️ 注意事項 (免責事項)
 

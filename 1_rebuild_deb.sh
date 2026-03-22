@@ -49,7 +49,13 @@ sed "s|^deb |deb [signed-by=${KEYRING_PATH}] |" "${DL_LIST_FILE}" | sudo tee "/e
 sudo apt update
 
 # 3. dmonitorパッケージをダウンロード
-apt download dmonitor
+REPO_VER=$(apt-cache madison dmonitor | grep 'app.d-star.info' | awk -F'|' '{print $2}' | tr -d ' ' | head -n 1)
+if [ -z "${REPO_VER}" ]; then
+    echo 'エラー: 公式リポジトリ上に dmonitor のパッケージが見つかりません。' >&2
+    exit 1
+fi
+echo "ダウンロード対象のリポジトリバージョン: ${REPO_VER}"
+apt download "dmonitor=${REPO_VER}"
 
 # ダウンロードファイルの特定とエラーチェック
 DEB_FILES=(dmonitor_*.deb)
@@ -118,14 +124,6 @@ $result =~ s/[[:cntrl:]]//g;
 BLOCK
 
 my $replace = <<'BLOCK';
-#open my $rs , "hostname -I 2>&1 |";
-#my @ip = <$rs>;
-#close $rs;
-#my $result = join '' , @ip;
-#my $num = index ($result, ' ');
-#$result = substr($result, 0, $num);
-#$result =~ s/\s+//g;
-#$result =~ s/[[:cntrl:]]//g;
 $result = $ENV{"SERVER_ADDR"};
 BLOCK
 
@@ -147,9 +145,20 @@ EOF
 perl "${PATCH_SCRIPT}" "${EXTRACT_DIR}"
 rm -f "${PATCH_SCRIPT}"
 
-# 9. パッケージ再構築
+# 9. udevルールの更新 (99-dstar.rulesに追記する)
+UDEV_RULE_FILE="${EXTRACT_DIR}/var/tmp/99-dstar.rules"
+# 既存 1) FT232 Serial, 2) ICOM IC-705, 3) ICOM ID-52
+# 追記 4) ICOM ID-50, 5) ICOM ID-52 PLUS
+if [ -f "${UDEV_RULE_FILE}" ]; then
+    cat << 'UDEV_EOF' >> "${UDEV_RULE_FILE}"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0c26", ATTRS{idProduct}=="0046", SYMLINK+="dstar", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0c26", ATTRS{idProduct}=="004c", SYMLINK+="dstar", MODE="0666"
+UDEV_EOF
+fi
+
+# 10. パッケージ再構築
 dpkg-deb --root-owner-group -b "${EXTRACT_DIR}" "${PATCHED_DEB}"
 
-# 10. パッチ適用済みdebファイルを元ディレクトリへ配置
+# 11. パッチ適用済みdebファイルを元ディレクトリへ配置
 mv "${PATCHED_DEB}" "${ORIG_DIR}/"
 echo "✅ パッチ適用済みdebファイルの作成が完了しました: ${ORIG_DIR}/${PATCHED_DEB}"

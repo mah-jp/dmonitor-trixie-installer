@@ -4,6 +4,15 @@ set -eux -o pipefail
 # 2_install_patched-deb.sh (Ver.20260322) for dmonitor
 # URL: https://github.com/mah-jp/dmonitor-trixie-installer
 
+REINSTALL=0
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --reinstall) REINSTALL=1 ;;
+        *) echo "エラー: 不明なオプションです: $1" >&2; exit 1 ;;
+    esac
+    shift
+done
+
 # アーキテクチャ確認 (armhf限定)
 if [ "$(dpkg --print-architecture)" != 'armhf' ]; then
     echo 'エラー: このスクリプトはarmhf環境でのみ実行可能です。' >&2
@@ -47,7 +56,11 @@ trap cleanup EXIT
 cd "${WORK_DIR}"
 
 # 3. パッチ済みdmonitorのインストール
-sudo apt install "${DMONITOR_DEB}"
+if [ "${REINSTALL}" -eq 1 ]; then
+    sudo apt install --reinstall "${DMONITOR_DEB}"
+else
+    sudo apt install "${DMONITOR_DEB}"
+fi
 
 # 4. WiringPi最新バージョンのURL取得 (GitHub API)
 echo 'WiringPiの最新バージョンを確認中...'
