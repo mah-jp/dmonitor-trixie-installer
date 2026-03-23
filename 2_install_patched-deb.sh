@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux -o pipefail
 
-# 2_install_patched-deb.sh (Ver.20260322) for dmonitor
+# 2_install_patched-deb.sh (Ver.20260323) for dmonitor
 # URL: https://github.com/mah-jp/dmonitor-trixie-installer
 
 REINSTALL=0
@@ -91,3 +91,5 @@ if [ -n "$IP_LIST" ]; then
 else
     echo 'OSを再起動してから、dmonitorの動作を確認してみてください。'
 fi
+
+exit

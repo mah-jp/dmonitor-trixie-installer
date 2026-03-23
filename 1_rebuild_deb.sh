@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux -o pipefail
 
-# 1_rebuild_deb.sh (Ver.20260322) for dmonitor
+# 1_rebuild_deb.sh (Ver.20260323) for dmonitor
 # URL: https://github.com/mah-jp/dmonitor-trixie-installer
 
 # アーキテクチャ確認 (armhf限定)
@@ -162,3 +162,9 @@ dpkg-deb --root-owner-group -b "${EXTRACT_DIR}" "${PATCHED_DEB}"
 # 11. パッチ適用済みdebファイルを元ディレクトリへ配置
 mv "${PATCHED_DEB}" "${ORIG_DIR}/"
 echo "✅ パッチ適用済みdebファイルの作成が完了しました: ${ORIG_DIR}/${PATCHED_DEB}"
+
+# 12. 公式アナウンス事項を表示
+echo '最後に、「dmonitor」の公式アナウンス事項を、dmonitor_setupのecho部分から抽出します。'
+curl -s http://app.d-star.info/debian/bookworm/dmonitor_setup | grep '^echo '
+
+exit
