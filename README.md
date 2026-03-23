@@ -18,7 +18,7 @@
 |Raspberry Pi OS (32-bit) 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 3 Model B|ICOM ID-52|
 |Raspberry Pi OS (32-bit) Lite 2025-12-04|Debian 13 (Trixie)|Raspberry Pi 3 Model B|ICOM ID-52|
 
-※テストは、ICOM ID-52をラズパイとUSB通信ケーブルで接続して行っています。
+※テストでは、ラズパイとICOM ID-52をデータ転送用USBケーブルで接続しています。
 
 ## 🚀 使い方
 
