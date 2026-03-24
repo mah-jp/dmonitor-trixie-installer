@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux -o pipefail
 
-# 1_rebuild_deb.sh (Ver.20260323) for dmonitor
+# 1_rebuild_deb.sh (Ver.20260325) for dmonitor
 # URL: https://github.com/mah-jp/dmonitor-trixie-installer
 
 # アーキテクチャ確認 (armhf限定)
@@ -19,6 +19,7 @@ DL_LIST_FILE='jarl.list'
 DL_KEY_FILE='jarl-pkg.key'
 EXTRACT_DIR='dmonitor_deb'
 TARGET_PATCH='patched1'
+EXPECTED_REPO_VER='02.00'
 
 # 1. 一時ディレクトリ作成
 WORK_DIR=$(mktemp -d)
@@ -54,6 +55,12 @@ if [ -z "${REPO_VER}" ]; then
     echo 'エラー: 公式リポジトリ上に dmonitor のパッケージが見つかりません。' >&2
     exit 1
 fi
+
+if [ "${REPO_VER}" != "${EXPECTED_REPO_VER}" ]; then
+    echo "エラー: ダウンロード可能な dmonitor のバージョンが ${REPO_VER} です。このバージョンは対象外です。" >&2
+    exit 1
+fi
+
 echo "ダウンロード対象のリポジトリバージョン: ${REPO_VER}"
 apt download "dmonitor=${REPO_VER}"
 
